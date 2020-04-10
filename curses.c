@@ -6,6 +6,7 @@ int main() {
 	int Alive = 1;
 	int MaxY;
 	int MaxX;
+	char *command;
 	initscr();
 	curs_set(0);
 	getmaxyx(stdscr, MaxY, MaxX);
@@ -26,9 +27,9 @@ int main() {
 		HalfX = MaxX / 2;
 		clear();
 		refresh();
+		noecho();
 		printw("%dy %dx\n", CurposY, CurposX);
 		mvprintw(CurposY, CurposX, "@");
-		mvprintw(0, (MaxX - strlen("Press F12 to die.")) / 2, "Press F12 to die.");
 		
 		int Action = getch();
 		if(Action == KEY_LEFT) {							// Key: left arrow, decreases x pos by 1
@@ -55,10 +56,23 @@ int main() {
 			CurposY = HalfY;
 			CurposX = HalfX;
 			continue;
-		} else if(Action == 410) {							// Key: back key (android)
+		} else if(Action == 58) {							// Key: ':', vim like commands
+			mvprintw(23, 0, ":");
+			echo();
+			getstr(command);
+			if(strcmp("q", command) == 0) {					// q closes game as soon as terminator is given
+				clear();
+				endwin();
+				return 0;
+			} else											// continues game if no or unknown input + terminator is given
+				continue;
+
+		} else if(Action == 410) {							// Key: back key (android, termux)
 			clear();
 			printw("Why not play this on your pc instead of your phone\n");
 			getch();
+			continue;
+
 		} else if(Action == KEY_F(12))						// Key: F12, kills character immediately, ending the game
 			Alive = 0;
 		else
