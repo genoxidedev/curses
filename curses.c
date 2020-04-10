@@ -15,6 +15,7 @@ int main() {
 	int CurposY = HalfY;
 	int CurposX = HalfX;
 
+	printw("This game is supposed to be played on standard 24x80 terminals\nthough basic stuff still works in bigger terminals\n");
 	printw("Screensize: %dy %dx\n", MaxY, MaxX);
 	getch();
 	clear();
@@ -60,11 +61,15 @@ int main() {
 			mvprintw(23, 0, ":");
 			echo();
 			getstr(command);
-			if(strcmp("q", command) == 0) {					// q closes game as soon as terminator is given
+			if(strcmp("q", command) == 0) {					// q closes game as soon as EOL is given
 				clear();
 				endwin();
 				return 0;
-			} else											// continues game if no or unknown input + terminator is given
+			} else if(strcmp("help", command) == 0) {
+				clear();
+				mvprintw(0, (MaxX - strlen("VIM-Like keybindings - Help")) / 2,"VIM-Like keybindings - Help");
+				getch();
+			} else											// continues game if no or unknown input + EOL is given
 				continue;
 
 		} else if(Action == 410) {							// Key: back key (android, termux)
