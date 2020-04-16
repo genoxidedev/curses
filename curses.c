@@ -8,19 +8,21 @@ int main() {
 	int MaxX;
 	char *command;
 	initscr();
+	cbreak();
 	curs_set(0);
 	getmaxyx(stdscr, MaxY, MaxX);
 	int HalfY = MaxY / 2;
 	int HalfX = MaxX / 2;
 	int CurposY = HalfY;
 	int CurposX = HalfX;
+	keypad(stdscr, TRUE);
 
 	printw("This game is supposed to be played on standard 24x80 terminals\nthough basic stuff still works in bigger terminals\n");
-	printw("Screensize: %dy %dx\n", MaxY, MaxX);
+	printw("This game also makes partial use of vim-like keybindings\nuse :help for a list\n");
+	printw("\nScreensize: %dy %dx\n", MaxY, MaxX);
 	getch();
 	clear();
 	refresh();
-	keypad(stdscr, TRUE);
 	while(Alive) {
 
 		getmaxyx(stdscr, MaxY, MaxX);
@@ -35,7 +37,7 @@ int main() {
 		int Action = getch();
 		if(Action == KEY_LEFT) {							// Key: left arrow, decreases x pos by 1
 			CurposX -= 1;
-			if(CurposX <= -1)
+			if(CurposX <= -1)								// This makes the character go to the other side of the screen when he hits the "wall"
 				CurposX += MaxX;
 			continue;
 		} else if(Action == KEY_RIGHT) {					// Key: right arrow, increases x pos by 1
@@ -58,18 +60,22 @@ int main() {
 			CurposX = HalfX;
 			continue;
 		} else if(Action == 58) {							// Key: ':', vim like commands
-			mvprintw(23, 0, ":");
+			mvprintw(MaxY - 1, 0, ":");
 			echo();
 			getstr(command);
-			if(strcmp("q", command) == 0) {					// q closes game as soon as EOL is given
+			if(strcmp("q", command) == 0) {
 				clear();
 				endwin();
 				return 0;
 			} else if(strcmp("help", command) == 0) {
 				clear();
-				mvprintw(0, (MaxX - strlen("VIM-Like keybindings - Help")) / 2,"VIM-Like keybindings - Help");
+				mvprintw(0, (MaxX - strlen("VIM-Like keybindings - Help")) / 2, "VIM-Like keybindings - Help");
+				mvprintw(1, (MaxX - strlen("===========================")) / 2, "===========================");
+				mvprintw(3, 0, "help - shows this page");
+				mvprintw(4, 0, "q - Exits game without any messages");
+				mvprintw(MaxY - 1, (MaxX - strlen("For game keybindings press h")) / 2, "For game keybindings press h");
 				getch();
-			} else											// continues game if no or unknown input + EOL is given
+			} else
 				continue;
 
 		} else if(Action == 410) {							// Key: back key (android, termux)
@@ -78,9 +84,7 @@ int main() {
 			getch();
 			continue;
 
-		} else if(Action == KEY_F(12))						// Key: F12, kills character immediately, ending the game
-			Alive = 0;
-		else
+		} else
 			continue;
 
 	}
