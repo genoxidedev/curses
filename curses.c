@@ -9,7 +9,7 @@
 // so you can't jump infinitely and stuff.
 // I am currently realizing how fucked up returning multiple values is. Kinda missing C# right now.
 // Forget that last sentence I figured it out. I am now in love with Arrays.
-int jump(int CurPosY, int CurPosX, int MaxY, int MaxX, int JmpPos[]) {
+void jump(int CurPosY, int CurPosX, int MaxY, int MaxX, int JmpPos[]) {
 
 	int PtrPosY = CurPosY;
 	int PtrPosX = CurPosX;
@@ -46,8 +46,6 @@ int jump(int CurPosY, int CurPosX, int MaxY, int MaxX, int JmpPos[]) {
 	JmpPos[0] = PtrPosY;
 	JmpPos[1] = PtrPosX;
 
-	return 0;
-
 }
 
 int main() {
@@ -56,7 +54,7 @@ int main() {
 	int MaxY;												// Maximum Screen Height
 	int MaxX;												// Maximum Screen Width
 	int JmpPos[2];											// Initializes Array used in jump function (0 = Y, 1 = X)
-	char *command;											// Used for VIM-like Commands
+	char command[20];										// Used for VIM-like Commands
 	initscr();
 	cbreak();
 	curs_set(0);
@@ -117,7 +115,7 @@ int main() {
 		} else if(Action == 58) {							// Key: ':', vim like commands
 			mvprintw(MaxY - 1, 0, ":");
 			echo();
-			getstr(command);
+			scanw("%s", &command);
 			if(strcmp("q", command) == 0) {
 				clear();
 				endwin();
