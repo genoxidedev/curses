@@ -1,14 +1,11 @@
 #include <ncurses.h>
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
 
 // Function used for "jumping" mechanism basically a copy of the "move" mechanism in the main function
 // except that this returns CurPosY and CurPosX and sets the Character at that position.
-// Will expand this later with limitations if this game ever becomes something playable (a game)
-// so you can't jump infinitely and stuff.
-// I am currently realizing how fucked up returning multiple values is. Kinda missing C# right now.
-// Forget that last sentence I figured it out. I am now in love with Arrays.
 void jump(int CurPosY, int CurPosX, int MaxY, int MaxX, int JmpPos[]) {
 
 	int PtrPosY = CurPosY;
@@ -21,6 +18,7 @@ void jump(int CurPosY, int CurPosX, int MaxY, int MaxX, int JmpPos[]) {
 		refresh();
 		printw("%dy %dx\n^%dy %dx", CurPosY, CurPosX, PtrPosY, PtrPosX);
 		mvprintw(CurPosY, CurPosX, "@");
+		mvprintw(PtrPosY - 1, PtrPosX, "|");
 		mvprintw(PtrPosY, PtrPosX, "V");
 		Destination = getch();
 
@@ -55,6 +53,9 @@ int main() {
 	int MaxX;												// Maximum Screen Width
 	int JmpPos[2];											// Initializes Array used in jump function (0 = Y, 1 = X)
 	char command[20];										// Used for VIM-like Commands
+	char mapFile[80];										// Used for getting maps (any format should work)
+	FILE *map;												// Used for storing maps
+	char readFile;											// Used for displaying maps
 	initscr();
 	cbreak();
 	curs_set(0);
@@ -68,7 +69,9 @@ int main() {
 	printw("This game is supposed to be played on standard 24x80 terminals\nthough basic stuff still works in bigger terminals\n");
 	printw("This game also makes partial use of vim-like keybindings\nuse :help for a list\n");
 	printw("\nScreensize: %dy %dx\n", MaxY, MaxX);
-	getch();
+	printw("\nMap: ");
+	scanw("%s", &mapFile);
+	map = fopen(mapFile, "r");
 	clear();
 	refresh();
 	while(Alive) {
@@ -79,7 +82,9 @@ int main() {
 		clear();
 		refresh();
 		noecho();
-		printw("%dy %dx\n", CurPosY, CurPosX);
+		while((readFile=fgetc(map)) != EOF)
+			printw("%c", readFile);
+		fseek(map, 0, SEEK_SET);
 		mvprintw(CurPosY, CurPosX, "@");
 		
 		int Action = getch();
@@ -120,12 +125,16 @@ int main() {
 				clear();
 				endwin();
 				return 0;
+			} else if(strcmp("curpos", command) == 0) {
+				printw("%dy %dx", CurPosY, CurPosX);
+				getch();
 			} else if(strcmp("help", command) == 0) {
 				clear();
 				mvprintw(0, (MaxX - strlen("VIM-Like keybindings - Help")) / 2, "VIM-Like keybindings - Help");
 				mvprintw(1, (MaxX - strlen("===========================")) / 2, "===========================");
 				mvprintw(3, 0, "help - shows this page");
-				mvprintw(4, 0, "q - Exits game without any messages");
+				mvprintw(4, 0, "curpos - Shows current Position of the Character");
+				mvprintw(5, 0, "q - Exits game without any messages");
 				mvprintw(MaxY - 1, (MaxX - strlen("For game keybindings press h")) / 2, "For game keybindings press h");
 				getch();
 			} else
