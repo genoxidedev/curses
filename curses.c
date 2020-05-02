@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 
 // Function used for "jumping" mechanism basically a copy of the "move" mechanism in the main function
@@ -12,7 +13,7 @@ void jump(int CurPosY, int CurPosX, int MaxY, int MaxX, int JmpPos[]) {
 	int PtrPosX = CurPosX;
 	int Destination = 1;
 
-	while(Destination != 10) {
+	while(Destination != 10) {				// While input is not enter key
 
 		clear();
 		refresh();
@@ -46,7 +47,17 @@ void jump(int CurPosY, int CurPosX, int MaxY, int MaxX, int JmpPos[]) {
 
 }
 
+void clearscr() {
+	
+	printf("\e[1;1H\e[2J");
+
+}
+
 int main() {
+	
+	clearscr();
+	printf("\033[38;5;196mC\033[38;5;208mu\033[38;5;226mr\033[38;5;118ms\033[38;5;46me\033[38;5;48ms\n");
+	sleep(1);
 
 	int Alive = 1;											// If this is 0 the program ends
 	int MaxY;												// Maximum Screen Height
@@ -124,9 +135,11 @@ int main() {
 			if(strcmp("q", command) == 0) {
 				clear();
 				endwin();
+				clearscr();
 				return 0;
 			} else if(strcmp("curpos", command) == 0) {
 				printw("%dy %dx", CurPosY, CurPosX);
+				*command = ' ';
 				getch();
 			} else if(strcmp("help", command) == 0) {
 				clear();
@@ -136,13 +149,17 @@ int main() {
 				mvprintw(4, 0, "curpos - Shows current Position of the Character");
 				mvprintw(5, 0, "q - Exits game without any messages");
 				mvprintw(MaxY - 1, (MaxX - strlen("For game keybindings press h")) / 2, "For game keybindings press h");
+				*command = ' ';
 				getch();
-			} else
+			} else {
+				*command = ' ';
 				continue;
+			}
 
 		} else if(Action == 410) {							// Key: back key (android, termux)
 			clear();
-			printw("Why not play this on your pc instead of your phone\n");
+			printw("Why not play this on your PC instead of your phone\n");
+			printw("Or anything that has a physical keyboard\n");
 			getch();
 			continue;
 
@@ -151,7 +168,7 @@ int main() {
 
 	}
 	
-	clear();
+	clearscr();
 	printw("Presumably you died. The End.\n");
 	getch();
 	endwin();
