@@ -5,13 +5,35 @@
 #include <unistd.h>
 
 
+// Reads a specific line of a file, still returns wrong numbers so not in use currently
+int readLine(char fileName[], int lineNumber) {
+
+	FILE *file = fopen(fileName, "r");
+	int count = 0;
+    char line[256];
+    while(fgets(line, sizeof(line), file) != NULL) {
+
+        if(count == lineNumber) {
+			char *test = NULL;
+            printf("%s\n", line);
+			printf("%ld\n", strtol(line, &test, 10));
+        } else {
+            count++;
+        }
+
+    }
+	fclose(file);
+	return atoi(line);
+
+}
+
 // Function used for "jumping" mechanism basically a copy of the "move" mechanism in the main function
 // except that this returns CurPosY and CurPosX and sets the Character at that position.
 void jump(int CurPosY, int CurPosX, int MaxY, int MaxX, int JmpPos[]) {
 
 	int PtrPosY = CurPosY;
 	int PtrPosX = CurPosX;
-	int Destination = 1;
+	int Destination;
 
 	while(Destination != 10) {				// While input is not enter key
 
@@ -53,6 +75,31 @@ void clearscr() {
 
 }
 
+// Very primitive save function but good enough for a start. Writes Variables from savedVars array into file.
+void save(int save, char savedVars[]) {
+	
+	clear();
+	FILE *savefile;
+
+	if(save == 1) {
+
+		savefile = fopen("curses.sav", "w");
+		printw("Saving.\n");
+		fprintf(savefile, "%d\n%d", savedVars[0], savedVars[1]);
+		fclose(savefile);
+
+	} else if(save == 0) {
+
+		printw("Loading.\n");
+		int Y = readLine("curses.sav", 0);
+		int X = readLine("curses.sav", 1);
+		printw("%d\n%d\n", Y, X);
+		getch();
+
+	}
+
+}
+
 int main() {
 	
 	clearscr();
@@ -64,6 +111,7 @@ int main() {
 	int MaxX;												// Maximum Screen Width
 	int JmpPos[2];											// Initializes Array used in jump function (0 = Y, 1 = X)
 	char command[20];										// Used for VIM-like Commands
+	char savedVars[2];										// Used for storing variables that are saved when calling save() function (Only positions currently)
 	char mapFile[80];										// Used for getting maps (any format should work)
 	FILE *map;												// Used for storing maps
 	char readFile;											// Used for displaying maps
@@ -77,7 +125,7 @@ int main() {
 	int CurPosX = HalfX;
 	keypad(stdscr, TRUE);
 
-	printw("This game is supposed to be played on standard 24x80 terminals\nthough basic stuff still works in bigger terminals\n");
+	printw("This game is supposed to be played on standard 24x80 terminals\nthough most stuff still works in bigger terminals\n");
 	printw("This game also makes partial use of vim-like keybindings\nuse :help for a list\n");
 	printw("\nScreensize: %dy %dx\n", MaxY, MaxX);
 	printw("\nMap: ");
@@ -97,6 +145,8 @@ int main() {
 			printw("%c", readFile);
 		fseek(map, 0, SEEK_SET);
 		mvprintw(CurPosY, CurPosX, "@");
+		savedVars[0] = CurPosY;
+		savedVars[1] = CurPosX;
 		
 		int Action = getch();
 		if(Action == KEY_LEFT) {							// Key: left arrow, decreases x pos by 1
@@ -132,8 +182,19 @@ int main() {
 			mvprintw(MaxY - 1, 0, ":");
 			echo();
 			scanw("%s", &command);
-			if(strcmp("q", command) == 0) {
+			if(strcmp("w", command) == 0) {
 				clear();
+				save(1, savedVars);
+				*command = ' ';
+				getch();
+			} else if(strcmp("q", command) == 0) {
+				clear();
+				endwin();
+				clearscr();
+				return 0;
+			} else if(strcmp("wq", command) == 0) {
+				clear();
+				save(1, savedVars);
 				endwin();
 				clearscr();
 				return 0;
@@ -142,21 +203,28 @@ int main() {
 				*command = ' ';
 				getch();
 			} else if(strcmp("help", command) == 0) {
+
 				clear();
 				mvprintw(0, (MaxX - strlen("VIM-Like keybindings - Help")) / 2, "VIM-Like keybindings - Help");
 				mvprintw(1, (MaxX - strlen("===========================")) / 2, "===========================");
-				mvprintw(3, 0, "help - shows this page");
+				mvprintw(3, 0, "help - Shows this page");
 				mvprintw(4, 0, "curpos - Shows current Position of the Character");
-				mvprintw(5, 0, "q - Exits game without any messages");
+				mvprintw(5, 0, "w - Saves game without exiting");
+				mvprintw(6, 0, "q - Exits game without saving");
+				mvprintw(7, 0, "wq - Saves and exits game");
 				mvprintw(MaxY - 1, (MaxX - strlen("For game keybindings press h")) / 2, "For game keybindings press h");
 				*command = ' ';
 				getch();
+				
 			} else {
 				*command = ' ';
 				continue;
 			}
 
-		} else if(Action == 410) {							// Key: back key (android, termux)
+		} else if(Action == 410) {							// Key: back key (android, termux), also resize in console window (windows, cygwin64)
+			
+			if(getenv("ANDROID_ROOT") == NULL && getenv("ANDROID_DATA") == NULL)
+				continue;
 			clear();
 			printw("Why not play this on your PC instead of your phone\n");
 			printw("Or anything that has a physical keyboard\n");
