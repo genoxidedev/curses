@@ -5,35 +5,13 @@
 #include <unistd.h>
 
 
-// Reads a specific line of a file, still returns wrong numbers so not in use currently
-int readLine(char fileName[], int lineNumber) {
-
-	FILE *file = fopen(fileName, "r");
-	int count = 0;
-    char line[256];
-    while(fgets(line, sizeof(line), file) != NULL) {
-
-        if(count == lineNumber) {
-			char *test = NULL;
-            printf("%s\n", line);
-			printf("%ld\n", strtol(line, &test, 10));
-        } else {
-            count++;
-        }
-
-    }
-	fclose(file);
-	return atoi(line);
-
-}
-
 // Function used for "jumping" mechanism basically a copy of the "move" mechanism in the main function
 // except that this returns CurPosY and CurPosX and sets the Character at that position.
 void jump(int CurPosY, int CurPosX, int MaxY, int MaxX, int JmpPos[]) {
 
 	int PtrPosY = CurPosY;
 	int PtrPosX = CurPosX;
-	int Destination;
+	int Destination = 0;
 
 	while(Destination != 10) {				// While input is not enter key
 
@@ -70,14 +48,14 @@ void jump(int CurPosY, int CurPosX, int MaxY, int MaxX, int JmpPos[]) {
 }
 
 void clearscr() {
-	
+
 	printf("\e[1;1H\e[2J");
 
 }
 
 // Very primitive save function but good enough for a start. Writes Variables from savedVars array into file.
 void save(int save, char savedVars[]) {
-	
+
 	clear();
 	FILE *savefile;
 
@@ -91,9 +69,9 @@ void save(int save, char savedVars[]) {
 	} else if(save == 0) {
 
 		printw("Loading.\n");
-		int Y = readLine("curses.sav", 0);
-		int X = readLine("curses.sav", 1);
-		printw("%d\n%d\n", Y, X);
+		//int Y = readFile("curses.sav", 0);
+		//int X = readFile("curses.sav", 1);
+		//printw("%d\n%d\n", Y, X);
 		getch();
 
 	}
@@ -101,7 +79,7 @@ void save(int save, char savedVars[]) {
 }
 
 int main() {
-	
+
 	clearscr();
 	printf("\033[38;5;196mC\033[38;5;208mu\033[38;5;226mr\033[38;5;118ms\033[38;5;46me\033[38;5;48ms\n");
 	sleep(1);
@@ -121,8 +99,8 @@ int main() {
 	getmaxyx(stdscr, MaxY, MaxX);
 	int HalfY = MaxY / 2;
 	int HalfX = MaxX / 2;
-	int CurPosY = HalfY;
-	int CurPosX = HalfX;
+	int CurPosY = 0;										// Stores horizontal cursor position
+	int CurPosX = 0;										// Stores vertical cursor position
 	keypad(stdscr, TRUE);
 
 	printw("This game is supposed to be played on standard 24x80 terminals\nthough most stuff still works in bigger terminals\n");
@@ -130,7 +108,12 @@ int main() {
 	printw("\nScreensize: %dy %dx\n", MaxY, MaxX);
 	printw("\nMap: ");
 	scanw("%s", &mapFile);
-	map = fopen(mapFile, "r");
+
+	if((map = fopen(mapFile, "r")) != NULL) {							// Check if File exists to prevent Segfaults
+		;
+    } else
+    	map = fopen("testmap", "r");
+
 	clear();
 	refresh();
 	while(Alive) {
@@ -147,7 +130,7 @@ int main() {
 		mvprintw(CurPosY, CurPosX, "@");
 		savedVars[0] = CurPosY;
 		savedVars[1] = CurPosX;
-		
+
 		int Action = getch();
 		if(Action == KEY_LEFT) {							// Key: left arrow, decreases x pos by 1
 			CurPosX -= 1;
@@ -215,30 +198,20 @@ int main() {
 				mvprintw(MaxY - 1, (MaxX - strlen("For game keybindings press h")) / 2, "For game keybindings press h");
 				*command = ' ';
 				getch();
-				
+
 			} else {
 				*command = ' ';
 				continue;
 			}
 
-		} else if(Action == 410) {							// Key: back key (android, termux), also resize in console window (windows, cygwin64)
-			
-			if(getenv("ANDROID_ROOT") == NULL && getenv("ANDROID_DATA") == NULL)
-				continue;
-			clear();
-			printw("Why not play this on your PC instead of your phone\n");
-			printw("Or anything that has a physical keyboard\n");
-			getch();
-			continue;
-
 		} else
 			continue;
 
 	}
-	
+
 	clearscr();
 	printw("Presumably you died. The End.\n");
 	getch();
 	endwin();
-	
+
 }
