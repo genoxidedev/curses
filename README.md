@@ -16,11 +16,4 @@ libraries should be included with gcc and clang.
 A basic:
 <br><code>g++ -o curses curses.c -lncurses</code>
 <br>should work well enough.
-<<<<<<< HEAD
 <br>Though I do include a very simple Makefile so running <code>make</code> is sufficient.
-=======
-
-To compile readFile.cpp use:
-<br><code>g++ -o readFile readFile.cpp</code>
-<br>though currently not in use
->>>>>>> 94f4a725257c6faa8d75c72a7346a9577e5a46ea
