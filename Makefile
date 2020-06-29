@@ -1,6 +1,6 @@
 all:
 	g++ -o curses curses.cpp -lncurses
-	./curses curses.sav
+	./curses testmap
 
 clean:
-	rm -f curses 
+	rm -f curses

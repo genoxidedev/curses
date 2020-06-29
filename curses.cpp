@@ -1,10 +1,15 @@
 #include <iostream>
 #include <fstream>
-#include <filesystem>
+#include <limits>
 #include <cstring>
 #include <vector>
 #include <ncurses.h>
 #include <unistd.h>
+
+#define ERR_NO_MAP 101
+
+#define y 0
+#define x 1
 
 using namespace std;
 
@@ -24,25 +29,27 @@ int readFileInts(const char filename[], int requestedInt) {
 
 }
 
-// Function used for "jumping" mechanism. Basically a copy of the "move" mechanism in the main function.
-// except that this returns CurPosY and CurPosX and sets the Character at that position.
-// More of a teleport right now.
+/*
+Function used for "jumping" mechanism. Basically a copy of the "move" mechanism in the main function.
+except that this returns CurPosY and CurPosX and sets the Character at that position.
+More of a teleport right now.
+*/
 void jump(int CurPos[], int MaxY, int MaxX, int JmpPos[], FILE *map) {
 
-	int PtrPosY = CurPos[0];
-	int PtrPosX = CurPos[1];
+	int PtrPosY = CurPos[y];
+	int PtrPosX = CurPos[x];
 	int Destination = 0;
 	char readFile;
 
-	while(Destination != 10) {				// While input is not enter key
+	while(Destination != 10) {										// While input is not enter key
 
 		clear();
 		refresh();
 		while((readFile=fgetc(map)) != EOF)
 			printw("%c", readFile);
 		fseek(map, 0, SEEK_SET);
-		mvprintw(MaxY - 2, 0, "%dy %dx\n^%dy %dx", CurPos[0], CurPos[1], PtrPosY, PtrPosX);
-		mvprintw(CurPos[0], CurPos[1], "@");
+		mvprintw(MaxY - 2, 0, "%dy %dx\n^%dy %dx", CurPos[y], CurPos[x], PtrPosY, PtrPosX);
+		mvprintw(CurPos[y], CurPos[x], "@");
 		mvprintw(PtrPosY - 1, PtrPosX, "|");
 		mvprintw(PtrPosY, PtrPosX, "V");
 		Destination = getch();
@@ -66,8 +73,8 @@ void jump(int CurPos[], int MaxY, int MaxX, int JmpPos[], FILE *map) {
 		}
 
 	}
-	JmpPos[0] = PtrPosY;
-	JmpPos[1] = PtrPosX;
+	JmpPos[y] = PtrPosY;
+	JmpPos[x] = PtrPosX;
 
 }
 
@@ -86,7 +93,7 @@ void save(char savedVars[]) {
 	FILE *savefile;
 
 	savefile = fopen("curses.sav", "w");
-	fprintf(savefile, "%d\n%d", savedVars[0], savedVars[1]);
+	fprintf(savefile, "%d\n%d", savedVars[y], savedVars[x]);
 	fclose(savefile);
 	printw("Saved");
 
@@ -103,7 +110,6 @@ int vim(char *command, char savedVars[], int CurPos[]) {
 
 	if(strcmp("w", command) == 0) {
 		save(savedVars);
-		getch();
 	} else if(strcmp("q", command) == 0) {
 		clear();
 		endwin();
@@ -118,7 +124,7 @@ int vim(char *command, char savedVars[], int CurPos[]) {
 		clearscr();
 		return 69;
 	} else if(strcmp("curpos", command) == 0) {
-		printw("%dy %dx", CurPos[0], CurPos[1]);
+		printw("%dy %dx", CurPos[y], CurPos[x]);
 		getch();
 	} else if(strcmp("savedVars", command) == 0) {				// This looks so bad
 
@@ -130,17 +136,23 @@ int vim(char *command, char savedVars[], int CurPos[]) {
 
 		mvprintw(4, 0, "CurPos 	   |                      |");
 		mvprintw(4, 20, "%dy %dx", readFileInts("curses.sav", 0), readFileInts("curses.sav", 1));
-		mvprintw(4, 44, "%dy %dx", CurPos[0], CurPos[1]);
+		mvprintw(4, 44, "%dy %dx", CurPos[y], CurPos[x]);
 
 		mvprintw(MaxY - 2, (MaxX - strlen("Load a Value?[y/n] ")) / 2, "Load a Value?[y/n] ");
 		int loadValue = getch();
 		if(loadValue == 121) {
 
-			mvprintw(MaxY - 1, (MaxX - strlen("Which Value? ")) / 2, "Which Value? ");
+			mvprintw(MaxY - 1, (MaxX - strlen("Which Value(Prepend with '-' to save instead)? ")) / 2, "Which Value(Prepend with '-' to save instead)? ");
 			scanw("%s", &loadValues);
-			if(strcmp("CurPos", loadValues) == 0) {
-				CurPos[0] = readFileInts("curses.sav", 0);
-				CurPos[1] = readFileInts("curses.sav", 1);
+			if(strcmp("CurPos", loadValues) == 0 || strcmp("1", loadValues) == 0) {
+				CurPos[y] = readFileInts("curses.sav", 0);
+				CurPos[x] = readFileInts("curses.sav", 1);
+			} else if(strcmp("-CurPos", loadValues) == 0 || strcmp("-1", loadValues) == 0) {
+				save(savedVars);
+			} else if(strcmp("CurPosY", loadValues) == 0) {
+				CurPos[y] = readFileInts("curses.sav", 0);
+			} else if(strcmp("CurPosX", loadValues) == 0) {
+				CurPos[x] = readFileInts("curses.sav", 1);
 			} else
 				;
 
@@ -168,7 +180,15 @@ int vim(char *command, char savedVars[], int CurPos[]) {
 
 }
 
+
+
 int main(int argc, char *argv[]) {
+
+	if(argc < 2) {													// This may be a bad idea
+		clearscr();
+		printf("Load a Map. (./curses *mapname)\n");
+		return ERR_NO_MAP;
+	}
 
 	int Alive = 1;
 	int MaxY;														// Maximum Screen Height
@@ -178,7 +198,6 @@ int main(int argc, char *argv[]) {
 
 	char command[20];												// Used for VIM-like Commands
 	char savedVars[2];												// Used for storing variables that are saved when calling save() function (Only positions currently)
-	char mapFile[80];												// Used for getting maps (any format should work)
 	char readFile;													// Used for displaying maps;
 
 	FILE *map;														// Used for storing maps
@@ -191,16 +210,17 @@ int main(int argc, char *argv[]) {
 	cbreak();
 	curs_set(0);
 	getmaxyx(stdscr, MaxY, MaxX);
+	start_color();
 	int HalfY = MaxY / 2;
 	int HalfX = MaxX / 2;
 
-	CurPos[0] = readFileInts("curses.sav", 0);			// Stores horizontal cursor position
-	CurPos[1] = readFileInts("curses.sav", 1);			// Stores vertical cursor position
+	CurPos[y] = readFileInts("curses.sav", 0);						// Stores horizontal cursor position
+	CurPos[x] = readFileInts("curses.sav", 1);						// Stores vertical cursor position
 
-	if(CurPos[0] >= MaxY)
-		CurPos[0] /= 2;
-	if(CurPos[1] >= MaxX)
-		CurPos[1] /= 2;
+	if(CurPos[y] >= MaxY)
+		CurPos[y] /= 2;
+	if(CurPos[x] >= MaxX)
+		CurPos[x] /= 2;
 
 
 	keypad(stdscr, TRUE);
@@ -209,10 +229,10 @@ int main(int argc, char *argv[]) {
 	printw("This game also makes partial use of vim-like keybindings\nuse :help for a list\n");
 	printw("\nScreensize: %dy %dx\n", MaxY, MaxX);
 	printw("Saved Positions: %dy %dx\n", CurPos[0], CurPos[1]);
-	printw("\nMap: ");
-	scanw("%s", &mapFile);
+	printw("\nMap: %s", argv[1]);
+	getch();
 
-	if((map = fopen(mapFile, "r")) != NULL)					// Check if File exists to prevent Segfaults
+	if((map = fopen(argv[1], "r")) != NULL)							// Check if File exists to prevent Segfaults
 		;
     else
     	map = fopen("testmap", "r");
@@ -228,55 +248,90 @@ int main(int argc, char *argv[]) {
 		clear();
 		refresh();
 		noecho();
+		fseek(map, 0, SEEK_SET);
 		while((readFile=fgetc(map)) != EOF)
 			printw("%c", readFile);
-		fseek(map, 0, SEEK_SET);
-		mvprintw(CurPos[0], CurPos[1], "@");
-		savedVars[0] = CurPos[0];
-		savedVars[1] = CurPos[1];
+
+		init_pair(1, COLOR_YELLOW, COLOR_BLACK);
+		color_set(1, 0);
+		mvprintw(CurPos[y], CurPos[x], "@");
+
+		color_set(0, 0);
+
+		savedVars[y] = CurPos[y];
+		savedVars[x] = CurPos[x];
 
 		int Action = getch();
-		if(Action == KEY_LEFT) {							// Key: left arrow, decreases x pos by 1
-			CurPos[1] -= 1;
-			if(CurPos[1] <= -1)								// This makes the character go to the other side of the screen when he hits the "wall"
-				CurPos[1] += MaxX;
+		if(Action == KEY_LEFT) {									// Key: left arrow, decreases x pos by 1
+
+			fseek(map, (CurPos[x] + (CurPos[y] * MaxX)) - 1, SEEK_SET);		// For Collision Detection. Still very much WIP
+			if(fgetc(map) == 'X')									// Collision detection currently only for "X"
+				continue;
+			CurPos[x] -= 1;
+			if(CurPos[x] <= -1)										// This makes the character go to the other side of the screen when he hits the "wall"
+				CurPos[x] += MaxX;
 			continue;
-		} else if(Action == KEY_RIGHT) {					// Key: right arrow, increases x pos by 1
-			CurPos[1] += 1;
-			if(CurPos[1] >= MaxX)
-				CurPos[1] -= MaxX;
+
+		} else if(Action == KEY_RIGHT) {							// Key: right arrow, increases x pos by 1
+
+			fseek(map, (CurPos[x] + (CurPos[y] * MaxX)) + 1, SEEK_SET);
+			if(fgetc(map) == 'X')
+				continue;
+			CurPos[x] += 1;
+			if(CurPos[x] >= MaxX)
+				CurPos[x] -= MaxX;
 			continue;
-		} else if(Action == KEY_DOWN) {						// Key: down arrow, decreases y pos by 1
-			CurPos[0] += 1;
-			if(CurPos[0] >= MaxY)
-				CurPos[0] -= MaxY;
+
+		} else if(Action == KEY_DOWN) {								// Key: down arrow, decreases y pos by 1
+
+			if(CurPos[y] == MaxY - 1)
+				fseek(map, CurPos[x], SEEK_SET);
+			else
+				fseek(map, (CurPos[x] + (CurPos[y] + 1) * MaxX), SEEK_SET);
+			if(fgetc(map) == 'X')
+				continue;
+			CurPos[y] += 1;
+			if(CurPos[y] >= MaxY)
+				CurPos[y] -= MaxY;
 			continue;
-		} else if(Action == KEY_UP) {						// Key: up arrow, increases y pos by 1
-			CurPos[0] -= 1;
-			if(CurPos[0] <= -1)
-				CurPos[0] += MaxY;
+
+		} else if(Action == KEY_UP) {								// Key: up arrow, increases y pos by 1
+
+			if(CurPos[y] == 0)
+				fseek(map, (CurPos[x] + MaxY * MaxX - MaxX), SEEK_SET);
+			else
+				fseek(map, (CurPos[x] + (CurPos[y] - 1) * MaxX), SEEK_SET);
+			if(fgetc(map) == 'X')
+				continue;
+			CurPos[y] -= 1;
+			if(CurPos[y] <= -1)
+				CurPos[y] += MaxY;
 			continue;
+
 		} else if(Action == ' ') {
+			fseek(map, 0, SEEK_SET);
 			jump(CurPos, MaxY, MaxX, JmpPos, map);
-			CurPos[0] = JmpPos[0];
-			CurPos[1] = JmpPos[1];
+			CurPos[y] = JmpPos[y];
+			CurPos[x] = JmpPos[x];
 			continue;
-		} else if(Action == 114) {							// Key: r, to reset character position to middle of screen
-			CurPos[0] = HalfY;
-			CurPos[1] = HalfX;
+		} else if(Action == 114) {									// Key: r, to reset character position to middle of screen
+			CurPos[y] = HalfY;
+			CurPos[x] = HalfX;
 			continue;
-		} else if(Action == 104) {
+		} else if(Action == 104) {									// Key: h, to show list of game keybindings
 
 			clear();
 			mvprintw(0, (MaxX - strlen("Keybindings")) / 2, "Keybindings");
 			mvprintw(1, (MaxX - strlen("===========")) / 2, "===========");
-			mvprintw(3, 0, "' ' - Initiates Jump Function");
-			mvprintw(4, 0, "r - Resets Cursor to center of terminal");
-			mvprintw(5, 0, ": - Opens up prompt for Vim like commands");
+			mvprintw(3, 0, "Arrow Keys - Movement");
+			mvprintw(4, 0, "' ' - Initiates Jump Function");
+			mvprintw(5, 0, "r - Resets Cursor to center of terminal");
+			mvprintw(6, 0, "h - Shows this");
+			mvprintw(7, 0, ": - Opens up prompt for Vim like commands");
 			mvprintw(MaxY - 1, (MaxX - strlen("Press any button to continue.")) / 2, "Press any button to continue.");
 			getch();
 
-		} else if(Action == 58) {							// Key: ':', vim like commands
+		} else if(Action == 58) {									// Key: ':', vim like commands
 
 			mvprintw(MaxY - 1, 0, ":");
 			echo();
@@ -293,7 +348,7 @@ int main(int argc, char *argv[]) {
 	printw("Presumably you died. The End.\n");
 	getch();
 	endwin();
-	cout << "Map played: " << mapFile << endl;
+	cout << "Map played: " << argv[1] << endl;
 	return 0;
 
 }
